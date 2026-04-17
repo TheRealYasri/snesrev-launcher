@@ -30,15 +30,12 @@ fi
 write_config() {
     local KEY="$1"
     local VAL="$2"
-    
     touch "$CONF_FILE"
-    
-    sed -i "/^$KEY=/d" "$CONF_FILE"
-    
+    grep -v "^$KEY=" "$CONF_FILE" > "$CONF_FILE.tmp"
+    mv "$CONF_FILE.tmp" "$CONF_FILE"
     echo "$KEY=\"$VAL\"" >> "$CONF_FILE"
 }
 
-# --- Default to OFF (0) ---
 [ -z "$INSTALL_DESKTOP" ] && INSTALL_DESKTOP=0
 
 if [ "$INSTALL_DIR" != "$LAST_PATH" ]; then
@@ -47,7 +44,6 @@ if [ "$INSTALL_DIR" != "$LAST_PATH" ]; then
     
     write_config "LAST_PATH" "$INSTALL_DIR"
     write_config "REFRESH_DESKTOP" "1"
-    
     LAST_PATH="$INSTALL_DIR"
     REFRESH_DESKTOP=1
 fi
@@ -64,18 +60,15 @@ sync_app_icon() {
     local NAME="$1"
     local SRC="$INTERNAL_DIR/$NAME"
     local DST="$INSTALL_DIR/srl-config/icons/$NAME"
-    
     local CLEAN_NAME="${NAME//./_}"
     local CACHE_VAR="CACHE_ICON_${CLEAN_NAME}_TIME"
     local SAVED_TIME="${!CACHE_VAR}"
 
     if [ -f "$SRC" ]; then
         local CURR_TIME=$(stat -c %Y "$SRC")
-        
         if [ "$CURR_TIME" == "$SAVED_TIME" ] && [ -f "$DST" ]; then
             return
         fi
-        
         echo ">> Updating Icon: $NAME" >&2
         cp "$SRC" "$DST"
         write_config "$CACHE_VAR" "$CURR_TIME"
@@ -90,13 +83,15 @@ sync_app_icon "smw.png"
 
 export LC_NUMERIC=en_US.UTF-8
 
-HASH_Z3_US="6D4F10A8B10E10DBE624CB23CF03B88BB8252973"
 HASH_SM="da957f0d63d14cb441d215462904c4fa8519c613"
+HASH_SM_REDUX="0F4133F2E6BDD275B0CEEC3E348E2D6BF1C8189E"
+
 HASH_SMW="553CF42F35ACF63028A369608742BB5B913C103F|6B47BB75D16514B6A476AA0C73A683A2A4C18765"
 HASH_SMAS="C05817C5B7DF2FBFE631563E0B37237156A8F6B6"
 HASH_SMB1="4A5278150F3395419D68CB02A42F7C3C62CDF8B4"
 HASH_SMBLL="493E14812AF7A92D0EACF00BA8BB6D3A266302CA"
 
+HASH_Z3_US="6D4F10A8B10E10DBE624CB23CF03B88BB8252973"
 HASH_Z3_DE="2E62494967FB0AFDF5DA1635607F9641DF7C6559"
 HASH_Z3_FR="229364A1B92A05167CD38609B1AA98F7041987CC"
 HASH_Z3_FRC="C1C6C7F76FFF936C534FF11F87A54162FC0AA100"
@@ -109,7 +104,8 @@ HASH_Z3_REDUX="B2A07A59E64C498BC1B2F28728F9BF4014C8D582"
 
 GAME_LIST=(
     "z3|Zelda 3 (US)" 
-    "sm|Super Metroid" 
+    "sm|Super Metroid"
+    "sm-redux|Super Metroid Redux" 
     "smw|Super Mario World" 
     "smb1|Super Mario Bros." 
     "smbll|The Lost Levels" 
@@ -135,10 +131,12 @@ show_help() {
     echo ""
     echo " Configuration:"
     echo "  desktop    Toggle Desktop Shortcuts ($STATE_LBL)"
+    echo "  help       Show this message"
     echo ""
     echo " Base Game Commands:"
     echo "  z3         Zelda 3 (US)      $HASH_Z3_US"
     echo "  sm         Super Metroid     $HASH_SM"
+    echo "  sm-redux   SM Redux          $HASH_SM_REDUX"
     echo "  smw        Super Mario World $HASH_SMW"
     echo "  smb1       Super Mario Bros. $HASH_SMB1"
     echo "  smbll      The Lost Levels   $HASH_SMBLL"
@@ -155,9 +153,16 @@ show_help() {
     echo "  z3-sv      (Swedish)         $HASH_Z3_SV"
     echo "  z3-redux   (Redux)           $HASH_Z3_REDUX"
     echo ""    
-    echo "Redux is the retranslation only, get it here..."
+    echo ""    
+    echo "Information on patches to use..."
+    echo ""    
+    echo "Super Metroid Redux - Just the default ips"
+    echo "https://www.romhacking.net/hacks/4963/"
+    echo ""    
+    echo "Zelda 3 Redux - Retranslation only."
     echo "https://www.romhacking.net/translations/6657/"
-    echo "You can patch it here..."
+    echo ""    
+    echo "Online Patcher..."
     echo "https://www.marcrobledo.com/RomPatcher.js/"    
     echo "Make sure \"Add SNES copier header\" is not selected"
     echo ""    
@@ -220,13 +225,16 @@ find_and_rename_rom() {
 }
 
 echo ">> Scanning directory for valid ROMs..." >&2
-export Z3_ROM=$(find_and_rename_rom "$HASH_Z3_US" "zelda3.sfc" "Z3")
+
 export SM_ROM=$(find_and_rename_rom "$HASH_SM" "sm.smc" "SM")
+export SM_REDUX_ROM=$(find_and_rename_rom "$HASH_SM_REDUX" "sm_redux.smc" "SM_REDUX")
+
 export SMW_ROM=$(find_and_rename_rom "$HASH_SMW" "smw.sfc" "SMW")
 export SMAS_ROM=$(find_and_rename_rom "$HASH_SMAS" "smas.sfc" "SMAS")
 export SMB1_ROM=$(find_and_rename_rom "$HASH_SMB1" "smb1.sfc" "SMB1")
 export SMBLL_ROM=$(find_and_rename_rom "$HASH_SMBLL" "smbll.sfc" "SMBLL")
 
+export Z3_ROM=$(find_and_rename_rom "$HASH_Z3_US" "zelda3.sfc" "Z3")
 export Z3_DE_ROM=$(find_and_rename_rom "$HASH_Z3_DE" "zelda3.de.sfc" "Z3_DE")
 export Z3_FR_ROM=$(find_and_rename_rom "$HASH_Z3_FR" "zelda3.fr.sfc" "Z3_FR")
 export Z3_FRC_ROM=$(find_and_rename_rom "$HASH_Z3_FRC" "zelda3.fr-c.sfc" "Z3_FRC")
@@ -245,6 +253,7 @@ for entry in "${GAME_LIST[@]}"; do
     case "$KEY" in
         z3)       [ -n "$Z3_ROM" ] && IS_PLAYABLE["$KEY"]=1 ;;
         sm)       [ -n "$SM_ROM" ] && IS_PLAYABLE["$KEY"]=1 ;;
+        sm-redux) [ -n "$SM_REDUX_ROM" ] && IS_PLAYABLE["$KEY"]=1 ;;
         smw)      [ -n "$SMW_ROM" ] && IS_PLAYABLE["$KEY"]=1 ;;
         smb1)     { [ -n "$SMB1_ROM" ] || [ -n "$SMAS_ROM" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
         smbll)    { [ -n "$SMBLL_ROM" ] || [ -n "$SMAS_ROM" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
@@ -268,7 +277,7 @@ install_desktop_file() {
     local ICON_NAME="utilities-terminal"
     case "$KEY" in
         z3*) ICON_NAME="z3.png" ;;
-        sm)  ICON_NAME="sm.png" ;;
+        sm|sm-redux)  ICON_NAME="sm.png" ;;
         smw|smb*) ICON_NAME="smw.png" ;;
     esac
     
@@ -281,12 +290,10 @@ install_desktop_file() {
     
     if [ -f "$FILE" ]; then
         rm "$FILE"
-        sleep .5
+        sleep 0.2
     fi
     
-    if [ "$GUI_MODE" -eq 0 ]; then
-        echo ">> Writing Shortcut: $TITLE" >&2
-    fi
+    echo ">> Writing Shortcut: $TITLE" >&2
     
     cat > "$FILE" <<EOF
 [Desktop Entry]
@@ -300,8 +307,7 @@ Categories=Game;
 StartupNotify=false
 EOF
     chmod +x "$FILE"
-    
-    sleep .5
+    sleep 0.2
 }
 
 sync_desktop_shortcuts() {
@@ -319,19 +325,15 @@ sync_desktop_shortcuts() {
             fi
         else
             if [ -f "$FILE" ]; then
-                if [ "$GUI_MODE" -eq 0 ]; then
-                    echo ">> Removing obsolete: $TITLE" >&2
-                fi
+                echo ">> Removing obsolete: $TITLE" >&2
                 rm "$FILE"
-                sleep .5
+                sleep 0.2
             fi
         fi
     done
 
     if [ "$REFRESH_DESKTOP" == "1" ]; then
-        if [ "$GUI_MODE" -eq 0 ]; then
-            echo ">> Desktop refresh complete. Resetting flag." >&2
-        fi
+        echo ">> Desktop refresh complete. Resetting flag." >&2
         write_config "REFRESH_DESKTOP" "0"
     fi
 }
@@ -341,13 +343,10 @@ remove_all_desktops() {
     for f in "$TARGET_DIR/SRL-"*".desktop"; do
         if [ -e "$f" ]; then
             rm "$f"
-            sleep .5
+            sleep 0.2
         fi
     done
-    
-    if [ "$GUI_MODE" -eq 0 ]; then
-        echo ">> All desktop shortcuts removed." >&2
-    fi
+    echo ">> All desktop shortcuts removed." >&2
 }
 
 toggle_desktop_install() {
@@ -364,11 +363,10 @@ toggle_desktop_install() {
     
     write_config "INSTALL_DESKTOP" "$INSTALL_DESKTOP"
     
+    echo ">> Desktop Integration: $STATE_TXT"
     if [ "$GUI_MODE" -eq 1 ] && command -v zenity &>/dev/null; then
         zenity --info --text="Desktop Integration: $STATE_TXT" --timeout=2
         exec "$INSTALL_DIR/$LAUNCHER_EXEC"
-    else
-        echo ">> Desktop Integration: $STATE_TXT"
     fi
 }
 
@@ -376,8 +374,8 @@ if [ "$INSTALL_DESKTOP" -eq 1 ]; then
     sync_desktop_shortcuts
 fi
 
-if [ "$GUI_MODE" -eq 1 ]; then 
-    if command -v zenity &>/dev/null; then
+if [ $# -eq 0 ]; then
+    if [ "$GUI_MODE" -eq 1 ] && command -v zenity &>/dev/null; then
         ZEN_ARGS=()
         for entry in "${GAME_LIST[@]}"; do
             KEY="${entry%%|*}"
@@ -415,7 +413,10 @@ extract_language () {
 }
 
 link_rom() {
-    [ -n "$1" ] && [ -e "$1" ] && ln -sf "$1" "$(basename "$1")"
+    local SRC="$1"
+    local DST="$2"
+    [ -z "$DST" ] && DST="$(basename "$SRC")"
+    [ -n "$SRC" ] && [ -e "$SRC" ] && ln -sf "$SRC" "$DST"
 }
 
 launch_std() {
@@ -426,7 +427,8 @@ launch_std() {
     shift 4
 
     [ -z "$ROM_VAR" ] && { echo "Error: ROM for $BIN_NAME not found."; exit 1; }
-    link_rom "$ROM_VAR"
+    
+    link_rom "$ROM_VAR" "$ROM_LINK_NAME"
 
     local REAL_CONF="$CONF_DIR/$TYPE/$INI_NAME"
     if [ ! -e "$REAL_CONF" ]; then
@@ -445,6 +447,49 @@ launch_std() {
         echo ">> Syncing configuration..."
         mv "$INI_NAME" "$REAL_CONF"
     fi
+}
+
+launch_smw() {
+    local TYPE="$1"
+    local GAME_ROM="$2"
+    shift 2
+
+    local DAT_FILE="$INSTALL_DIR/$CONF_DIR/$TYPE/smw_assets.dat"
+    
+    if [ ! -e "$DAT_FILE" ]; then
+        echo ">> Asset extraction needed (smw_assets.dat)..." >&2
+        [ -z "$SMW_ROM" ] && { echo "Error: SMW ROM needed for assets."; exit 1; }
+        
+        mkdir -p "$(dirname "$DAT_FILE")"
+        
+        export ASSETDIR="$(mktemp -d /tmp/smw-XXXXX)"
+        cp "${SCRIPT_PATH}"/assets/smw_tools/* "$ASSETDIR/"
+        cp "$SMW_ROM" "$ASSETDIR/smw.sfc"
+        
+        cd "$ASSETDIR" || exit 1
+        
+        if [ -f "util.py" ]; then
+            sed -i 's/raise Exception(f/print(f/g' util.py
+        fi
+
+        echo ">> Running restool.py..." >&2
+        "${SCRIPT_PATH}"/bin/python3 restool.py --extract-from-rom -r smw.sfc --no-hash-check
+        
+        if [ -e "smw_assets.dat" ]; then
+            cp "smw_assets.dat" "$DAT_FILE"
+            echo ">> Assets generated." >&2
+        else
+             echo "Error: Extraction failed." >&2
+             rm -rf "$ASSETDIR"
+             exit 1
+        fi
+        
+        cd "$INSTALL_DIR" || exit 1
+        rm -rf "$ASSETDIR"
+    fi
+
+    ln -sf "$DAT_FILE" smw_assets.dat
+    launch_std "$GAME_ROM" "smw" "smw.ini" "$@"
 }
 
 launch_z3() {
@@ -480,7 +525,7 @@ launch_z3() {
         cp "$Z3_ROM" "$ASSETDIR/tables/zelda3.sfc"
         [ -n "$TRANS_ROM_VAR" ] && cp "$TRANS_ROM_VAR" "$ASSETDIR/tables/translate.sfc"
         
-        cd "$ASSETDIR"/tables
+        cd "$ASSETDIR/tables"
         "${SCRIPT_PATH}"/bin/python3 restool.py --extract-from-rom -r zelda3.sfc
         [ -e "translate.sfc" ] && [ "$TARGET_LANG" != "en" ] && extract_language "$TARGET_LANG"
         cd - > /dev/null
@@ -511,7 +556,7 @@ launch_z3() {
 extractrom () {
     export LD_LIBRARY_PATH="${SCRIPT_PATH}/lib:${LD_LIBRARY_PATH}"
 
-    for f in zelda3.ini sm.ini smw.ini zelda3_assets.dat saves \
+    for f in zelda3.ini sm.ini smw.ini zelda3_assets.dat smw_assets.dat saves \
              zelda3.sfc sm.smc smw.sfc smb1.sfc smbll.sfc \
              zelda3.*.sfc; do
         if [ -L "$f" ]; then rm "$f"; fi
@@ -539,8 +584,11 @@ extractrom () {
         sm)
             launch_std "$SM_ROM" "sm" "sm.ini" "" "$@" 
             ;;
+        sm-redux)
+            ROM_LINK_NAME="sm.smc" launch_std "$SM_REDUX_ROM" "sm-redux" "sm.ini" "" "$@" 
+            ;;
         smw)
-            launch_std "$SMW_ROM" "smw" "smw.ini" "" "$@"
+            launch_smw "$TYPE" "$SMW_ROM" "" "$@"
             ;;
         smb1|smbll)
             local TARGET_ROM=""
@@ -548,28 +596,44 @@ extractrom () {
             [ -e "$CONF_ROM_PATH" ] && TARGET_ROM="$CONF_ROM_PATH"
 
             if [ -z "$TARGET_ROM" ]; then
-                echo ">> Extracting from All-Stars..."
+                echo ">> Extracting from All-Stars..." >&2
                 [ -z "$SMAS_ROM" ] && { echo "Error: All-Stars ROM not found."; exit 1; }
+                
                 export ASSETDIR="$(mktemp -d /tmp/smb-XXXXX)"
-                cp -r "${SCRIPT_PATH}"/assets/smb "$ASSETDIR"
+                mkdir -p "$ASSETDIR/installer"
+                cp -r "${SCRIPT_PATH}"/assets/smb/* "$ASSETDIR/installer/"
                 cp "$SMAS_ROM" "$ASSETDIR/smas.sfc"
-                cd "$ASSETDIR"/smb && "${SCRIPT_PATH}"/bin/python3 extract.py && cd - > /dev/null
-                mv "$ASSETDIR/smb/smb1.sfc" "srl-roms/"
-                mv "$ASSETDIR/smb/smbll.sfc" "srl-roms/"
+                
+                cd "$ASSETDIR/installer" || exit 1
+                
+                "${SCRIPT_PATH}"/bin/python3 extract.py
+                
+                if [ -f "smb1.sfc" ]; then
+                    mv smb1.sfc "$INSTALL_DIR/srl-roms/"
+                    mv smbll.sfc "$INSTALL_DIR/srl-roms/"
+                    echo ">> Extraction successful." >&2
+                else
+                    echo "Error: Extraction failed (output missing)." >&2
+                    cd "$INSTALL_DIR" || exit 1
+                    rm -rf "$ASSETDIR"
+                    exit 1
+                fi
+                
+                cd "$INSTALL_DIR" || exit 1
                 rm -rf "$ASSETDIR"
                 TARGET_ROM="$CONF_ROM_PATH"
             fi
             
-            launch_std "$TARGET_ROM" "smw" "smw.ini" "$(basename "$TARGET_ROM")" "$@"
+            launch_smw "$TYPE" "$TARGET_ROM" "$(basename "$TARGET_ROM")" "$@"
             ;;
     esac
 }
 
 COMMAND=$1; shift
 case "$COMMAND" in
+    help) show_help; exit 0 ;;
     desktop) toggle_desktop_install ;;
-    z3|z3-*|sm|smw|smb1|smbll) extractrom "$COMMAND" "$@" ;;
+    z3|z3-*|sm|sm-redux|smw|smb1|smbll) extractrom "$COMMAND" "$@" ;;
     *) echo "Error: '$COMMAND' invalid."; echo ""; show_help; exit 1 ;;
 esac
-
 
