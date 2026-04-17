@@ -8,6 +8,8 @@ else
     cd "$(dirname "$(realpath "$0")")"
 fi
 
+mkdir -p "srl-roms"
+
 export LC_NUMERIC=en_US.UTF-8
 
 HASH_Z3_US="6D4F10A8B10E10DBE624CB23CF03B88BB8252973"
@@ -84,20 +86,33 @@ fi
 find_and_rename_rom() {
     local TARGET_HASH="$1"
     local NEW_NAME="$2"
+    local ROM_DIR="srl-roms"
     local HASHER=""
 
     if command -v sha1sum &> /dev/null; then HASHER="sha1sum"
     elif command -v shasum &> /dev/null; then HASHER="shasum"
     else echo "Error: No hashing tool found." >&2; exit 1; fi
 
-    local FOUND_FILE=$($HASHER *.s[mf]c *.smc 2>/dev/null | grep -iE "$TARGET_HASH" | head -n 1 | sed 's/^[0-9a-fA-F]*  //')
+    if [ -e "$ROM_DIR/$NEW_NAME" ]; then
+        echo "$ROM_DIR/$NEW_NAME"
+        return
+    fi
 
+    # 2. Check root directory (Move if found)
+    local FOUND_FILE=$($HASHER *.s[mf]c *.smc 2>/dev/null | grep -iE "$TARGET_HASH" | head -n 1 | sed 's/^[0-9a-fA-F]*  //')
     if [ -n "$FOUND_FILE" ]; then
-        if [ "$FOUND_FILE" != "$NEW_NAME" ]; then
-            echo ">> ROM Match! Renaming '$FOUND_FILE' -> '$NEW_NAME'" >&2
-            mv "$FOUND_FILE" "$NEW_NAME"
-        fi
-        echo "$NEW_NAME"
+        echo ">> ROM Found! Moving '$FOUND_FILE' -> '$ROM_DIR/$NEW_NAME'" >&2
+        mv "$FOUND_FILE" "$ROM_DIR/$NEW_NAME"
+        echo "$ROM_DIR/$NEW_NAME"
+        return
+    fi
+
+    FOUND_FILE=$($HASHER "$ROM_DIR"/*.s[mf]c "$ROM_DIR"/*.smc 2>/dev/null | grep -iE "$TARGET_HASH" | head -n 1 | sed 's/^[0-9a-fA-F]*  //')
+    if [ -n "$FOUND_FILE" ]; then
+        echo ">> ROM Found in $ROM_DIR! Renaming '$FOUND_FILE' -> '$ROM_DIR/$NEW_NAME'" >&2
+        mv "$FOUND_FILE" "$ROM_DIR/$NEW_NAME"
+        echo "$ROM_DIR/$NEW_NAME"
+        return
     fi
 }
 
@@ -127,11 +142,31 @@ extract_language () {
     "${SCRIPT_PATH}"/bin/python3 restool.py --languages="$1"
 }
 
+link_rom() {
+    [ -n "$1" ] && [ -e "$1" ] && ln -sf "$1" "$(basename "$1")"
+}
+
 extractrom () {
     export LD_LIBRARY_PATH="${SCRIPT_PATH}/lib:${LD_LIBRARY_PATH}"
 
+    for f in zelda3.ini sm.ini smw.ini zelda3_assets.dat saves \
+             zelda3.sfc sm.smc smw.sfc smb1.sfc smbll.sfc \
+             zelda3.*.sfc; do
+        if [ -L "$f" ]; then rm "$f"; fi
+    done
+
     local TYPE=$1; shift
-    echo ">> Preparing to launch: $TYPE"
+    
+    local CONF_DIR="srl-config/$TYPE"
+    local SAVE_DIR="srl-saves/$TYPE"
+    mkdir -p "$CONF_DIR" "$SAVE_DIR"
+    
+    if [ -d "saves" ] && [ ! -L "saves" ]; then mv "saves" "saves.bak"; fi
+    # Force creation of the link (cleanup loop above handles removal if it was a link)
+    ln -sf "$SAVE_DIR" "saves"
+    
+    echo ">> Preparing to launch: $TYPE (Config: $CONF_DIR | Saves: $SAVE_DIR)"
+
     case "$TYPE" in
         z3|z3-*)
             local TARGET_LANG=""
@@ -149,9 +184,8 @@ extractrom () {
                 z3-redux) TARGET_LANG="redux"; TRANS_ROM_VAR="$Z3_REDUX_ROM";;
             esac
 
-            local LANG_DAT="zelda3_assets.dat.$TARGET_LANG"
+            local LANG_DAT="$CONF_DIR/zelda3_assets.dat"
 
-            # Extraction Block
             if [ ! -e "$LANG_DAT" ]; then
                 echo ">> Asset file '$LANG_DAT' not found. Starting extraction..."
                 [ -z "$Z3_ROM" ] && { echo "Error: Missing US Zelda 3 ROM content."; exit 1; }
@@ -171,86 +205,105 @@ extractrom () {
                 [ -e "translate.sfc" ] && [ "$TARGET_LANG" != "en" ] && extract_language "$TARGET_LANG"
                 cd - > /dev/null
                 
-                echo ">> Moving generated assets to current directory..."
+                echo ">> Moving generated assets to '$CONF_DIR'..."
                 cp "$ASSETDIR"/tables/zelda3_assets.dat "$LANG_DAT"
                 
-                # Directly save ini to the Command-Specific filename to avoid duplicates
-                [ -e "$ASSETDIR"/zelda3.ini ] && cp "$ASSETDIR"/zelda3.ini "zelda3.ini.$TYPE"
+                [ -e "$ASSETDIR"/zelda3.ini ] && [ ! -e "$CONF_DIR/zelda3.ini" ] && cp "$ASSETDIR"/zelda3.ini "$CONF_DIR/zelda3.ini"
                 rm -rf "$ASSETDIR"
                 echo ">> Cleanup complete."
             fi
 
-            cp "$LANG_DAT" zelda3_assets.dat
+            ln -sf "$LANG_DAT" zelda3_assets.dat
+            link_rom "$Z3_ROM"
+            [ -n "$TRANS_ROM_VAR" ] && link_rom "$TRANS_ROM_VAR"
             
-            # Run Logic: Swap -> Run -> Save
-            local CONF="zelda3.ini.$TYPE"
-            if [ ! -e "$CONF" ]; then
-                # Try to initialize from language specific ini (from extraction) or fallback to default
-                echo ">> Initializing new configuration file: $CONF"
-                if [ -e "zelda3.ini.$TARGET_LANG" ]; then
-                    cp "zelda3.ini.$TARGET_LANG" "$CONF"
-                else
-                    cp "${SCRIPT_PATH}"/assets/zelda3.ini "$CONF"
-                fi
+            local REAL_CONF="$CONF_DIR/zelda3.ini"
+            if [ ! -e "$REAL_CONF" ]; then
+                echo ">> Initializing new configuration..."
+                [ -e "zelda3.ini.$TARGET_LANG" ] && cp "zelda3.ini.$TARGET_LANG" "$REAL_CONF" || cp "${SCRIPT_PATH}"/assets/zelda3.ini "$REAL_CONF"
             fi
             
-            echo ">> Loading configuration from: $CONF"
-            cp "$CONF" zelda3.ini
+            echo ">> Linking configuration..."
+            ln -sf "$REAL_CONF" zelda3.ini
+            
             echo ">> Launching Zelda 3 executable..."
             "${SCRIPT_PATH}"/bin/zelda3 "$@"
-            echo ">> Saving configuration to: $CONF"
-            cp zelda3.ini "$CONF"
+
+            if [ ! -L "zelda3.ini" ] && [ -f "zelda3.ini" ]; then
+                echo ">> Syncing configuration change back to storage..."
+                mv "zelda3.ini" "$REAL_CONF"
+            fi
             ;;
         sm)
             [ -z "$SM_ROM" ] && { echo "Error: Super Metroid ROM not found."; exit 1; }
-            local CONF="sm.ini.sm"
-            [ ! -e "$CONF" ] && cp "${SCRIPT_PATH}"/assets/sm.ini "$CONF"
+            link_rom "$SM_ROM"
             
-            echo ">> Loading configuration from: $CONF"
-            cp "$CONF" sm.ini
+            local REAL_CONF="$CONF_DIR/sm.ini"
+            [ ! -e "$REAL_CONF" ] && cp "${SCRIPT_PATH}"/assets/sm.ini "$REAL_CONF"
+            
+            echo ">> Linking configuration..."
+            ln -sf "$REAL_CONF" sm.ini
+
             echo ">> Launching Super Metroid executable..."
             "${SCRIPT_PATH}"/bin/sm "$@"
-            echo ">> Saving configuration to: $CONF"
-            cp sm.ini "$CONF"
+
+            if [ ! -L "sm.ini" ] && [ -f "sm.ini" ]; then
+                echo ">> Syncing configuration change back to storage..."
+                mv "sm.ini" "$REAL_CONF"
+            fi
             ;;
         smw)
             [ -z "$SMW_ROM" ] && { echo "Error: Super Mario World ROM not found."; exit 1; }
-            local CONF="smw.ini.smw"
-            [ ! -e "$CONF" ] && cp "${SCRIPT_PATH}"/assets/smw.ini "$CONF"
+            link_rom "$SMW_ROM"
             
-            echo ">> Loading configuration from: $CONF"
-            cp "$CONF" smw.ini
+            local REAL_CONF="$CONF_DIR/smw.ini"
+            [ ! -e "$REAL_CONF" ] && cp "${SCRIPT_PATH}"/assets/smw.ini "$REAL_CONF"
+            
+            echo ">> Linking configuration..."
+            ln -sf "$REAL_CONF" smw.ini
+
             echo ">> Launching Super Mario World executable..."
             "${SCRIPT_PATH}"/bin/smw "$@"
-            echo ">> Saving configuration to: $CONF"
-            cp smw.ini "$CONF"
+
+            if [ ! -L "smw.ini" ] && [ -f "smw.ini" ]; then
+                echo ">> Syncing configuration change back to storage..."
+                mv "smw.ini" "$REAL_CONF"
+            fi
             ;;
         smb1|smbll)
             local TARGET_ROM=""
-            [ "$TYPE" == "smb1" ] && TARGET_ROM="$SMB1_ROM" || TARGET_ROM="$SMBLL_ROM"
-            if [ -z "$TARGET_ROM" ]; then
-                 if [ ! -e "$TYPE.sfc" ]; then
-                    echo ">> Target ROM '$TYPE.sfc' missing. Extracting from All-Stars..."
-                    [ -z "$SMAS_ROM" ] && { echo "Error: All-Stars ROM not found."; exit 1; }
-                    export ASSETDIR="$(mktemp -d /tmp/smb-XXXXX)"
-                    cp -r "${SCRIPT_PATH}"/assets/smb "$ASSETDIR"
-                    cp "$SMAS_ROM" "$ASSETDIR/smas.sfc"
-                    cd "$ASSETDIR"/smb && "${SCRIPT_PATH}"/bin/python3 extract.py && cd - > /dev/null
-                    echo ">> Extraction done. Copying individual ROMs..."
-                    cp "$ASSETDIR/smb/smb1.sfc" . ; cp "$ASSETDIR/smb/smbll.sfc" .
-                    rm -rf "$ASSETDIR"
-                 fi
-                 TARGET_ROM="$TYPE.sfc"
-            fi
-            local CONF="smw.ini.$TYPE"
-            [ ! -e "$CONF" ] && cp "${SCRIPT_PATH}"/assets/smw.ini "$CONF"
+            local CONF_ROM_PATH="srl-roms/$TYPE.sfc"
             
-            echo ">> Loading configuration from: $CONF"
-            cp "$CONF" smw.ini
-            echo ">> Launching SMW (SMB Mode) with ROM: $TARGET_ROM"
-            "${SCRIPT_PATH}"/bin/smw "$TARGET_ROM" "$@"
-            echo ">> Saving configuration to: $CONF"
-            cp smw.ini "$CONF"
+            if [ -e "$CONF_ROM_PATH" ]; then TARGET_ROM="$CONF_ROM_PATH"; fi
+
+            if [ -z "$TARGET_ROM" ]; then
+                echo ">> Target ROM '$TYPE.sfc' missing. Extracting from All-Stars..."
+                [ -z "$SMAS_ROM" ] && { echo "Error: All-Stars ROM not found."; exit 1; }
+                export ASSETDIR="$(mktemp -d /tmp/smb-XXXXX)"
+                cp -r "${SCRIPT_PATH}"/assets/smb "$ASSETDIR"
+                cp "$SMAS_ROM" "$ASSETDIR/smas.sfc"
+                cd "$ASSETDIR"/smb && "${SCRIPT_PATH}"/bin/python3 extract.py && cd - > /dev/null
+                echo ">> Extraction done. Moving ROMs to srl-roms/..."
+                mv "$ASSETDIR/smb/smb1.sfc" "srl-roms/"
+                mv "$ASSETDIR/smb/smbll.sfc" "srl-roms/"
+                rm -rf "$ASSETDIR"
+                TARGET_ROM="$CONF_ROM_PATH"
+            fi
+            
+            link_rom "$TARGET_ROM"
+            local REAL_CONF="$CONF_DIR/smw.ini"
+            [ ! -e "$REAL_CONF" ] && cp "${SCRIPT_PATH}"/assets/smw.ini "$REAL_CONF"
+            
+            echo ">> Linking configuration..."
+            ln -sf "$REAL_CONF" smw.ini
+
+            echo ">> Launching SMW (SMB Mode)..."
+            "${SCRIPT_PATH}"/bin/smw "$(basename "$TARGET_ROM")" "$@"
+
+            if [ ! -L "smw.ini" ] && [ -f "smw.ini" ]; then
+                echo ">> Syncing configuration change back to storage..."
+                mv "smw.ini" "$REAL_CONF"
+            fi
             ;;
     esac
 }
