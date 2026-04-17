@@ -3,7 +3,7 @@
 ### Change Log
 1. Automatically find the right rom and rename it, just drop them into the same folder as the appimage.
 2. Added command line parameters for .desktop files or to run from other apps.
-3. (update 1) Recompiled super metroid, it fixed crashing and graphical bugs in main menu and opening scene. 
+3. (update 1) Recompiled super metroid, it fixed crashing/graphical bugs. https://github.com/LaserEyess/sm/tree/cmake
 4. (update 2) added back zenity gui, no sub menus.
 5. (update 2) Made every game variation that shares ini files each get there own that is copied in when launched.
 6. (update 2) Added text output on what the script is doing as it runs.
@@ -13,6 +13,8 @@
 10. (update 4) included info where to get the zelda 3 redux translation
 11. (Update 5) Added option (default: disabled) to install .desktop files with auto update if you move the directory.
 12. (Update 5) Refactored some sections and added a cache for some parts to speed up the script.
+13. (Update 6) Recompiled smw for lag issues. https://github.com/snesrev/smw/pull/44
+14. (Update 6) Added super metroid redux, needed a seperate executable. https://github.com/testyourmine/sm-redux
 
 ```
 -------------------------------------------------------
@@ -22,10 +24,12 @@
 
  Configuration:
   desktop    Toggle Desktop Shortcuts (Disabled)
+  help       Show this message
 
  Base Game Commands:
   z3         Zelda 3 (US)      6D4F10A8B10E10DBE624CB23CF03B88BB8252973
   sm         Super Metroid     da957f0d63d14cb441d215462904c4fa8519c613
+  sm-redux   SM Redux          0F4133F2E6BDD275B0CEEC3E348E2D6BF1C8189E
   smw        Super Mario World 553CF42F35ACF63028A369608742BB5B913C103F|6B47BB75D16514B6A476AA0C73A683A2A4C18765
   smb1       Super Mario Bros. 4A5278150F3395419D68CB02A42F7C3C62CDF8B4
   smbll      The Lost Levels   493E14812AF7A92D0EACF00BA8BB6D3A266302CA
@@ -42,11 +46,21 @@
   z3-sv      (Swedish)         43CD3438469B2C3FE879EA2F410B3EF3CB3F1CA4
   z3-redux   (Redux)           B2A07A59E64C498BC1B2F28728F9BF4014C8D582
 
-Redux is the retranslation only, get it here...
+
+Information on patches to use...
+
+Super Metroid Redux - Just the default ips
+https://www.romhacking.net/hacks/4963/
+
+Zelda 3 Redux - Retranslation only.
 https://www.romhacking.net/translations/6657/
-You can patch it here...
+
+Online Patcher...
 https://www.marcrobledo.com/RomPatcher.js/
 Make sure "Add SNES copier header" is not selected
+
+-------------------------------------------------------
+
 ```
 
 -------------------------------------------------------
@@ -54,11 +68,21 @@ Make sure "Add SNES copier header" is not selected
 ### Special Thanks
 This is a appimage for linux based on the work of these people
 ```
+Original appimage maker         https://github.com/qurious-pixel/zelda3/releases/tag/launcher
+
+##Decomplation Source
 Mario Source                    https://github.com/galaxyhaxz/smw-src
 Super Metroid Source            https://github.com/strager/supermetroid
 Zelda 3 Source                  https://github.com/snesrev/zelda3
+
+##Ports/Patches
 PC Porter                       https://github.com/snesrev
-appimage maker                  https://github.com/qurious-pixel/zelda3/releases/tag/launcher
-updated builder for sm          https://github.com/LaserEyess/sm/tree/cmake
-z3-redux translator             https://www.romhacking.net/translations/6657/
+Super Mario World lag patch     https://github.com/snesrev/smw/pull/44
+Super Metroid Redux PC Port     https://github.com/testyourmine/sm-redux
+Super Metroid updated builder   https://github.com/LaserEyess/sm/tree/cmake
+
+##Rom Hacks
+Zelda 3 Redux                   https://www.romhacking.net/translations/6657/
+Super Metroid Redux             https://www.romhacking.net/hacks/4963/
+
 ```
