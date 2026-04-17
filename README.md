@@ -4,7 +4,6 @@
 1. Automatically find the right rom and rename it, just drop them into the same folder as the appimage.
 2. Added command line parameters for .desktop files or to run from other apps.
 3. (update 1) Recompiled super metroid, it fixed crashing and graphical bugs in main menu and opening scene. 
-- built here https://github.com/TheRealYasri/sm/actions/runs/24377734056
 4. (update 2) added back zenity gui, no sub menus.
 5. (update 2) Made every game variation that shares ini files each get there own that is copied in when launched.
 6. (update 2) Added text output on what the script is doing as it runs.
@@ -12,7 +11,6 @@
 8. (update 3) On game launch, symlinks for that game version's configs, saves,and rom are created.
 9. (update 3) it cleans up old links from past runs, when a game is started.
 10. (update 4) included info where to get the zelda 3 redux translation
-- put a copy of the translation as a download below.
 11. (Update 5) Added option (default: disabled) to install .desktop files with auto update if you move the directory.
 12. (Update 5) Refactored some sections and added a cache for some parts to speed up the script.
 
