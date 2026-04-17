@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# --- Setup Paths ---
 INTERNAL_DIR="$(dirname "$(realpath "$0")")"
 SCRIPT_PATH="${INTERNAL_DIR}/usr"
 
@@ -19,38 +18,53 @@ mkdir -p "srl-roms" "srl-config" "srl-saves" "srl-config/icons"
 CONF_DIR="srl-config"
 CONF_FILE="srl-config/srl.ini"
 
-# --- Load Persistence ---
+GUI_MODE=0
+if [ $# -eq 0 ]; then
+    GUI_MODE=1
+fi
+
 if [ -f "$CONF_FILE" ]; then
     source "$CONF_FILE"
 fi
 
-# --- Request #2: Path State & Refresh Flag ---
+write_config() {
+    local KEY="$1"
+    local VAL="$2"
+    
+    touch "$CONF_FILE"
+    
+    sed -i "/^$KEY=/d" "$CONF_FILE"
+    
+    echo "$KEY=\"$VAL\"" >> "$CONF_FILE"
+}
+
+# --- Default to OFF (0) ---
+[ -z "$INSTALL_DESKTOP" ] && INSTALL_DESKTOP=0
+
 if [ "$INSTALL_DIR" != "$LAST_PATH" ]; then
-    # Path changed! Update storage and set refresh flag
-    echo "LAST_PATH=\"$INSTALL_DIR\"" >> "$CONF_FILE"
-    echo "REFRESH_DESKTOP=1" >> "$CONF_FILE"
-    # Update memory
+    echo ">> Detected path change ($LAST_PATH -> $INSTALL_DIR)" >&2
+    echo ">> Updating configuration..." >&2
+    
+    write_config "LAST_PATH" "$INSTALL_DIR"
+    write_config "REFRESH_DESKTOP" "1"
+    
     LAST_PATH="$INSTALL_DIR"
+    REFRESH_DESKTOP=1
 fi
 
-# --- Helpers for Ini Updates ---
 update_rom_cache() {
     local KEY="$1"
     local FILE="$2"
     local TS="$3"
-    echo "CACHE_${KEY}_PATH=\"$FILE\"" >> "$CONF_FILE"
-    echo "CACHE_${KEY}_TIME=\"$TS\"" >> "$CONF_FILE"
+    write_config "CACHE_${KEY}_PATH" "$FILE"
+    write_config "CACHE_${KEY}_TIME" "$TS"
 }
 
-# --- Request #3: Smart Icon Sync ---
 sync_app_icon() {
     local NAME="$1"
-    # Icon Source (Inside AppImage/Script Dir)
     local SRC="$INTERNAL_DIR/$NAME"
-    # Icon Dest (User Config Dir)
     local DST="$INSTALL_DIR/srl-config/icons/$NAME"
     
-    # Construct Cache Variable Name (e.g. CACHE_ICON_z3_png_TIME)
     local CLEAN_NAME="${NAME//./_}"
     local CACHE_VAR="CACHE_ICON_${CLEAN_NAME}_TIME"
     local SAVED_TIME="${!CACHE_VAR}"
@@ -58,22 +72,21 @@ sync_app_icon() {
     if [ -f "$SRC" ]; then
         local CURR_TIME=$(stat -c %Y "$SRC")
         
-        # If timestamps match AND file exists, skip copy
         if [ "$CURR_TIME" == "$SAVED_TIME" ] && [ -f "$DST" ]; then
             return
         fi
         
-        # Copy and Update Cache
+        echo ">> Updating Icon: $NAME" >&2
         cp "$SRC" "$DST"
-        echo "$CACHE_VAR=\"$CURR_TIME\"" >> "$CONF_FILE"
+        write_config "$CACHE_VAR" "$CURR_TIME"
+    elif [ -f "$DST" ]; then
+        return
     fi
 }
 
-# Sync Icons immediately (Fast due to caching)
 sync_app_icon "z3.png"
 sync_app_icon "sm.png"
 sync_app_icon "smw.png"
-
 
 export LC_NUMERIC=en_US.UTF-8
 
@@ -94,7 +107,6 @@ HASH_Z3_NL="FA8ADFDBA2697C9A54D583A1284A22AC764C7637"
 HASH_Z3_SV="43CD3438469B2C3FE879EA2F410B3EF3CB3F1CA4"
 HASH_Z3_REDUX="B2A07A59E64C498BC1B2F28728F9BF4014C8D582"
 
-# --- Request #1: Rename Mario ---
 GAME_LIST=(
     "z3|Zelda 3 (US)" 
     "sm|Super Metroid" 
@@ -113,10 +125,16 @@ GAME_LIST=(
 )
 
 show_help() {
+    local STATE_LBL="Disabled"
+    [ "$INSTALL_DESKTOP" -eq 1 ] && STATE_LBL="Enabled"
+
     echo "-------------------------------------------------------"
     echo " SNESREV Command Line Launcher"
     echo "-------------------------------------------------------"
     echo " Usage: ./snesrev.appimage [command]"
+    echo ""
+    echo " Configuration:"
+    echo "  desktop    Toggle Desktop Shortcuts ($STATE_LBL)"
     echo ""
     echo " Base Game Commands:"
     echo "  z3         Zelda 3 (US)      $HASH_Z3_US"
@@ -152,7 +170,6 @@ find_and_rename_rom() {
     local CACHE_KEY="$3"
     local ROM_DIR="srl-roms"
     
-    # --- Fast Cache Check ---
     local VAR_PATH="CACHE_${CACHE_KEY}_PATH"
     local VAR_TIME="CACHE_${CACHE_KEY}_TIME"
     local SAVED_PATH="${!VAR_PATH}"
@@ -202,7 +219,7 @@ find_and_rename_rom() {
     fi
 }
 
-echo ">> Scanning directory for valid ROMs..."
+echo ">> Scanning directory for valid ROMs..." >&2
 export Z3_ROM=$(find_and_rename_rom "$HASH_Z3_US" "zelda3.sfc" "Z3")
 export SM_ROM=$(find_and_rename_rom "$HASH_SM" "sm.smc" "SM")
 export SMW_ROM=$(find_and_rename_rom "$HASH_SMW" "smw.sfc" "SMW")
@@ -243,7 +260,123 @@ for entry in "${GAME_LIST[@]}"; do
     esac
 done
 
-if [ $# -eq 0 ]; then 
+install_desktop_file() {
+    local KEY="$1"
+    local TITLE="$2"
+    local USER_APP_DIR="$HOME/.local/share/applications"
+    
+    local ICON_NAME="utilities-terminal"
+    case "$KEY" in
+        z3*) ICON_NAME="z3.png" ;;
+        sm)  ICON_NAME="sm.png" ;;
+        smw|smb*) ICON_NAME="smw.png" ;;
+    esac
+    
+    local ICON_PATH="utilities-terminal"
+    if [ -f "$INSTALL_DIR/srl-config/icons/$ICON_NAME" ]; then
+        ICON_PATH="$INSTALL_DIR/srl-config/icons/$ICON_NAME"
+    fi
+
+    local FILE="$USER_APP_DIR/SRL-$TITLE.desktop"
+    
+    if [ -f "$FILE" ]; then
+        rm "$FILE"
+        sleep .5
+    fi
+    
+    if [ "$GUI_MODE" -eq 0 ]; then
+        echo ">> Writing Shortcut: $TITLE" >&2
+    fi
+    
+    cat > "$FILE" <<EOF
+[Desktop Entry]
+Type=Application
+Name=SRL-$TITLE
+Exec="$INSTALL_DIR/$LAUNCHER_EXEC" $KEY
+Path=$INSTALL_DIR
+Icon=$ICON_PATH
+Terminal=false
+Categories=Game;
+StartupNotify=false
+EOF
+    chmod +x "$FILE"
+    
+    sleep .5
+}
+
+sync_desktop_shortcuts() {
+    local USER_APP_DIR="$HOME/.local/share/applications"
+    mkdir -p "$USER_APP_DIR"
+
+    for entry in "${GAME_LIST[@]}"; do
+        local KEY="${entry%%|*}"
+        local TITLE="${entry#*|}"
+        local FILE="$USER_APP_DIR/SRL-$TITLE.desktop"
+        
+        if [ "${IS_PLAYABLE[$KEY]}" -eq 1 ]; then
+            if [ "$REFRESH_DESKTOP" == "1" ] || [ ! -f "$FILE" ]; then
+                install_desktop_file "$KEY" "$TITLE"
+            fi
+        else
+            if [ -f "$FILE" ]; then
+                if [ "$GUI_MODE" -eq 0 ]; then
+                    echo ">> Removing obsolete: $TITLE" >&2
+                fi
+                rm "$FILE"
+                sleep .5
+            fi
+        fi
+    done
+
+    if [ "$REFRESH_DESKTOP" == "1" ]; then
+        if [ "$GUI_MODE" -eq 0 ]; then
+            echo ">> Desktop refresh complete. Resetting flag." >&2
+        fi
+        write_config "REFRESH_DESKTOP" "0"
+    fi
+}
+
+remove_all_desktops() {
+    local TARGET_DIR="$HOME/.local/share/applications"
+    for f in "$TARGET_DIR/SRL-"*".desktop"; do
+        if [ -e "$f" ]; then
+            rm "$f"
+            sleep .5
+        fi
+    done
+    
+    if [ "$GUI_MODE" -eq 0 ]; then
+        echo ">> All desktop shortcuts removed." >&2
+    fi
+}
+
+toggle_desktop_install() {
+    if [ "$INSTALL_DESKTOP" -eq 1 ]; then
+        INSTALL_DESKTOP=0
+        STATE_TXT="Disabled"
+        remove_all_desktops
+    else
+        INSTALL_DESKTOP=1
+        STATE_TXT="Enabled"
+        REFRESH_DESKTOP=1
+        sync_desktop_shortcuts
+    fi
+    
+    write_config "INSTALL_DESKTOP" "$INSTALL_DESKTOP"
+    
+    if [ "$GUI_MODE" -eq 1 ] && command -v zenity &>/dev/null; then
+        zenity --info --text="Desktop Integration: $STATE_TXT" --timeout=2
+        exec "$INSTALL_DIR/$LAUNCHER_EXEC"
+    else
+        echo ">> Desktop Integration: $STATE_TXT"
+    fi
+}
+
+if [ "$INSTALL_DESKTOP" -eq 1 ]; then
+    sync_desktop_shortcuts
+fi
+
+if [ "$GUI_MODE" -eq 1 ]; then 
     if command -v zenity &>/dev/null; then
         ZEN_ARGS=()
         for entry in "${GAME_LIST[@]}"; do
@@ -255,6 +388,13 @@ if [ $# -eq 0 ]; then
                 ZEN_ARGS+=("$KEY" "$TITLE (Missing Files)")
             fi
         done
+
+        if [ "$INSTALL_DESKTOP" -eq 1 ]; then
+            DESK_LBL="Desktop Shortcuts (Enabled)"
+        else
+            DESK_LBL="Desktop Shortcuts (Disabled)"
+        fi
+        ZEN_ARGS+=("desktop" ">> $DESK_LBL <<")
 
         SEL=$(zenity --list --title="SNESREV Launcher" --height=600 --width=450 \
             --column="Cmd" --column="Game" --hide-header "${ZEN_ARGS[@]}")
@@ -378,6 +518,7 @@ extractrom () {
     done
 
     local TYPE=$1; shift
+    local CONF_DIR="srl-config" 
     local SAVE_DIR="srl-saves/$TYPE"
     mkdir -p "$CONF_DIR/$TYPE" "$SAVE_DIR"
     
@@ -426,7 +567,9 @@ extractrom () {
 
 COMMAND=$1; shift
 case "$COMMAND" in
+    desktop) toggle_desktop_install ;;
     z3|z3-*|sm|smw|smb1|smbll) extractrom "$COMMAND" "$@" ;;
     *) echo "Error: '$COMMAND' invalid."; echo ""; show_help; exit 1 ;;
 esac
+
 
