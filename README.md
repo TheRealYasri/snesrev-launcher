@@ -3,7 +3,8 @@
 ### Change Log
 1. Automatically find the right rom and rename it, just drop them into the same folder as the appimage.
 2. Added command line parameters for .desktop files or to run from other apps.
-3. (update 1) Recompiled super metroid, it fixed crashing/graphical bugs. https://github.com/LaserEyess/sm/tree/cmake
+3. (update 1) Recompiled super metroid, it fixed crashing/graphical bugs.
+(https://github.com/TheRealYasri/sm/actions/runs/24377734056)
 4. (update 2) added back zenity gui, no sub menus.
 5. (update 2) Made every game variation that shares ini files each get there own that is copied in when launched.
 6. (update 2) Added text output on what the script is doing as it runs.
@@ -13,8 +14,9 @@
 10. (update 4) included info where to get the zelda 3 redux translation
 11. (Update 5) Added option (default: disabled) to install .desktop files with auto update if you move the directory.
 12. (Update 5) Refactored some sections and added a cache for some parts to speed up the script.
-13. (Update 6) Recompiled smw for lag issues. https://github.com/snesrev/smw/pull/44
-14. (Update 6) Added super metroid redux, needed a seperate executable. https://github.com/testyourmine/sm-redux
+13. (Update 6) Recompiled smw for lag issues.
+(https://github.com/TheRealYasri/smw/actions/runs/24545395292)
+14. (Update 6) Added super metroid redux, needed a seperate executable. (https://github.com/TheRealYasri/sm/actions/runs/24582028652)
 
 ```
 -------------------------------------------------------
