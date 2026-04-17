@@ -1,11 +1,17 @@
 #!/bin/bash
 
-SCRIPT_PATH=`dirname $(realpath $0)`/usr
-export LD_LIBRARY_PATH="${SCRIPT_PATH}/lib:${LD_LIBRARY_PATH}"
+SCRIPT_PATH="$(dirname "$(realpath "$0")")/usr"
+
+if [ -n "$APPIMAGE" ]; then
+    cd "$(dirname "$APPIMAGE")"
+else
+    cd "$(dirname "$(realpath "$0")")"
+fi
+
 export LC_NUMERIC=en_US.UTF-8
 
 HASH_Z3_US="6D4F10A8B10E10DBE624CB23CF03B88BB8252973"
-HASH_SM="DA957F0D63D14CB441D215462904C4FA8519C613"
+HASH_SM="da957f0d63d14cb441d215462904c4fa8519c613"
 HASH_SMW="553CF42F35ACF63028A369608742BB5B913C103F|6B47BB75D16514B6A476AA0C73A683A2A4C18765"
 HASH_SMAS="C05817C5B7DF2FBFE631563E0B37237156A8F6B6"
 HASH_SMB1="4A5278150F3395419D68CB02A42F7C3C62CDF8B4"
@@ -25,7 +31,7 @@ show_help() {
     echo "-------------------------------------------------------"
     echo " SNESREV Command Line Launcher"
     echo "-------------------------------------------------------"
-    echo " Usage: $0 [command]"
+    echo " Usage: ./snesrev.appimage [command]"
     echo ""
     echo " Base Game Commands:"
     echo "  z3         Zelda 3 (US)      $HASH_Z3_US"
@@ -49,7 +55,31 @@ show_help() {
     echo "-------------------------------------------------------"
 }
 
-if [ $# -eq 0 ]; then show_help; exit 0; fi
+if [ $# -eq 0 ]; then 
+    if command -v zenity &>/dev/null; then
+        SEL=$(zenity --list --title="SNESREV Launcher" --height=600 --width=400 \
+            --column="Cmd" --column="Game" --hide-header \
+            "z3" "Zelda 3 (US)" \
+            "sm" "Super Metroid" \
+            "smw" "Super Mario World" \
+            "smb1" "Mario Bros 1" \
+            "smbll" "Lost Levels" \
+            "z3-redux" "Zelda 3 Redux" \
+            "z3-de" "Zelda 3 (German)" \
+            "z3-fr" "Zelda 3 (French)" \
+            "z3-fr-c" "Zelda 3 (French Can)" \
+            "z3-es" "Zelda 3 (Spanish)" \
+            "z3-pl" "Zelda 3 (Polish)" \
+            "z3-pt" "Zelda 3 (Portuguese)" \
+            "z3-nl" "Zelda 3 (Dutch)" \
+            "z3-sv" "Zelda 3 (Swedish)")
+        
+        [ -z "$SEL" ] && exit 0
+        set -- "$SEL"
+    else
+        show_help; exit 0
+    fi
+fi
 
 find_and_rename_rom() {
     local TARGET_HASH="$1"
@@ -64,13 +94,14 @@ find_and_rename_rom() {
 
     if [ -n "$FOUND_FILE" ]; then
         if [ "$FOUND_FILE" != "$NEW_NAME" ]; then
-            echo "Match found! Renaming '$FOUND_FILE' to '$NEW_NAME'..." >&2
+            echo ">> ROM Match! Renaming '$FOUND_FILE' -> '$NEW_NAME'" >&2
             mv "$FOUND_FILE" "$NEW_NAME"
         fi
         echo "$NEW_NAME"
     fi
 }
 
+echo ">> Scanning directory for valid ROMs..."
 export Z3_ROM=$(find_and_rename_rom "$HASH_Z3_US" "zelda3.sfc")
 export SM_ROM=$(find_and_rename_rom "$HASH_SM" "sm.smc")
 export SMW_ROM=$(find_and_rename_rom "$HASH_SMW" "smw.sfc")
@@ -89,6 +120,7 @@ export Z3_SV_ROM=$(find_and_rename_rom "$HASH_Z3_SV" "zelda3.sv.sfc")
 export Z3_REDUX_ROM=$(find_and_rename_rom "$HASH_Z3_REDUX" "zelda3.redux.sfc")
 
 extract_language () {
+    echo ">> Processing dialogue for language: $1"
     sed -i 's/# Language/Language/g' ../zelda3.ini
     sed -i "s/Language = .*/Language = $1/g" ../zelda3.ini
     "${SCRIPT_PATH}"/bin/python3 restool.py --extract-dialogue -r translate.sfc
@@ -96,7 +128,10 @@ extract_language () {
 }
 
 extractrom () {
+    export LD_LIBRARY_PATH="${SCRIPT_PATH}/lib:${LD_LIBRARY_PATH}"
+
     local TYPE=$1; shift
+    echo ">> Preparing to launch: $TYPE"
     case "$TYPE" in
         z3|z3-*)
             local TARGET_LANG=""
@@ -116,58 +151,106 @@ extractrom () {
 
             local LANG_DAT="zelda3_assets.dat.$TARGET_LANG"
 
+            # Extraction Block
             if [ ! -e "$LANG_DAT" ]; then
+                echo ">> Asset file '$LANG_DAT' not found. Starting extraction..."
                 [ -z "$Z3_ROM" ] && { echo "Error: Missing US Zelda 3 ROM content."; exit 1; }
                 if [ "$TARGET_LANG" != "en" ] && [ -z "$TRANS_ROM_VAR" ]; then
                     echo "Error: Missing translation ROM content for $TARGET_LANG."; exit 1
                 fi
 
                 export ASSETDIR="$(mktemp -d /tmp/z3-XXXXX)"
+                echo ">> Created temp directory: $ASSETDIR"
                 cp -r "${SCRIPT_PATH}"/assets/* "$ASSETDIR"
                 cp "$Z3_ROM" "$ASSETDIR/tables/zelda3.sfc"
                 [ -n "$TRANS_ROM_VAR" ] && cp "$TRANS_ROM_VAR" "$ASSETDIR/tables/translate.sfc"
                 
                 cd "$ASSETDIR"/tables
+                echo ">> Running python extractor on main ROM..."
                 "${SCRIPT_PATH}"/bin/python3 restool.py --extract-from-rom -r zelda3.sfc
                 [ -e "translate.sfc" ] && [ "$TARGET_LANG" != "en" ] && extract_language "$TARGET_LANG"
                 cd - > /dev/null
+                
+                echo ">> Moving generated assets to current directory..."
                 cp "$ASSETDIR"/tables/zelda3_assets.dat "$LANG_DAT"
-                [ -e "$ASSETDIR"/zelda3.ini ] && cp "$ASSETDIR"/zelda3.ini "zelda3.ini.$TARGET_LANG"
+                
+                # Directly save ini to the Command-Specific filename to avoid duplicates
+                [ -e "$ASSETDIR"/zelda3.ini ] && cp "$ASSETDIR"/zelda3.ini "zelda3.ini.$TYPE"
                 rm -rf "$ASSETDIR"
+                echo ">> Cleanup complete."
             fi
 
             cp "$LANG_DAT" zelda3_assets.dat
-            [ -e "zelda3.ini.$TARGET_LANG" ] && cp "zelda3.ini.$TARGET_LANG" zelda3.ini
-            [ ! -e zelda3.ini ] && cp "${SCRIPT_PATH}"/assets/zelda3.ini .
+            
+            # Run Logic: Swap -> Run -> Save
+            local CONF="zelda3.ini.$TYPE"
+            if [ ! -e "$CONF" ]; then
+                # Try to initialize from language specific ini (from extraction) or fallback to default
+                echo ">> Initializing new configuration file: $CONF"
+                if [ -e "zelda3.ini.$TARGET_LANG" ]; then
+                    cp "zelda3.ini.$TARGET_LANG" "$CONF"
+                else
+                    cp "${SCRIPT_PATH}"/assets/zelda3.ini "$CONF"
+                fi
+            fi
+            
+            echo ">> Loading configuration from: $CONF"
+            cp "$CONF" zelda3.ini
+            echo ">> Launching Zelda 3 executable..."
             "${SCRIPT_PATH}"/bin/zelda3 "$@"
+            echo ">> Saving configuration to: $CONF"
+            cp zelda3.ini "$CONF"
             ;;
         sm)
             [ -z "$SM_ROM" ] && { echo "Error: Super Metroid ROM not found."; exit 1; }
-            [ ! -e sm.ini ] && cp "${SCRIPT_PATH}"/assets/sm.ini .
+            local CONF="sm.ini.sm"
+            [ ! -e "$CONF" ] && cp "${SCRIPT_PATH}"/assets/sm.ini "$CONF"
+            
+            echo ">> Loading configuration from: $CONF"
+            cp "$CONF" sm.ini
+            echo ">> Launching Super Metroid executable..."
             "${SCRIPT_PATH}"/bin/sm "$@"
+            echo ">> Saving configuration to: $CONF"
+            cp sm.ini "$CONF"
             ;;
         smw)
             [ -z "$SMW_ROM" ] && { echo "Error: Super Mario World ROM not found."; exit 1; }
-            [ ! -e smw.ini ] && cp "${SCRIPT_PATH}"/assets/smw.ini .
+            local CONF="smw.ini.smw"
+            [ ! -e "$CONF" ] && cp "${SCRIPT_PATH}"/assets/smw.ini "$CONF"
+            
+            echo ">> Loading configuration from: $CONF"
+            cp "$CONF" smw.ini
+            echo ">> Launching Super Mario World executable..."
             "${SCRIPT_PATH}"/bin/smw "$@"
+            echo ">> Saving configuration to: $CONF"
+            cp smw.ini "$CONF"
             ;;
         smb1|smbll)
             local TARGET_ROM=""
             [ "$TYPE" == "smb1" ] && TARGET_ROM="$SMB1_ROM" || TARGET_ROM="$SMBLL_ROM"
             if [ -z "$TARGET_ROM" ]; then
                  if [ ! -e "$TYPE.sfc" ]; then
+                    echo ">> Target ROM '$TYPE.sfc' missing. Extracting from All-Stars..."
                     [ -z "$SMAS_ROM" ] && { echo "Error: All-Stars ROM not found."; exit 1; }
                     export ASSETDIR="$(mktemp -d /tmp/smb-XXXXX)"
                     cp -r "${SCRIPT_PATH}"/assets/smb "$ASSETDIR"
                     cp "$SMAS_ROM" "$ASSETDIR/smas.sfc"
                     cd "$ASSETDIR"/smb && "${SCRIPT_PATH}"/bin/python3 extract.py && cd - > /dev/null
+                    echo ">> Extraction done. Copying individual ROMs..."
                     cp "$ASSETDIR/smb/smb1.sfc" . ; cp "$ASSETDIR/smb/smbll.sfc" .
                     rm -rf "$ASSETDIR"
                  fi
                  TARGET_ROM="$TYPE.sfc"
             fi
-            [ ! -e smw.ini ] && cp "${SCRIPT_PATH}"/assets/smw.ini .
+            local CONF="smw.ini.$TYPE"
+            [ ! -e "$CONF" ] && cp "${SCRIPT_PATH}"/assets/smw.ini "$CONF"
+            
+            echo ">> Loading configuration from: $CONF"
+            cp "$CONF" smw.ini
+            echo ">> Launching SMW (SMB Mode) with ROM: $TARGET_ROM"
             "${SCRIPT_PATH}"/bin/smw "$TARGET_ROM" "$@"
+            echo ">> Saving configuration to: $CONF"
+            cp smw.ini "$CONF"
             ;;
     esac
 }
@@ -177,3 +260,4 @@ case "$COMMAND" in
     z3|z3-*|sm|smw|smb1|smbll) extractrom "$COMMAND" "$@" ;;
     *) echo "Error: '$COMMAND' invalid."; echo ""; show_help; exit 1 ;;
 esac
+
