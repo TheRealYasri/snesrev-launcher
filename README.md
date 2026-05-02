@@ -19,6 +19,9 @@
 14. (Update 6) Added super metroid redux, needed a seperate executable. (https://github.com/TheRealYasri/sm/actions/runs/24582028652)
 15. (Update 7) Removed many unneeded libraries.
 16. (Update 7) Changed appimage maker to [Anylinux-AppImages](https://github.com/pkgforge-dev/Anylinux-AppImages) 
+17. (Update 8) Super Metroid Redux will auto patch if base rom is available.
+18. (Update 8) Zelda 3 Redux will auto patch if base rom is available.
+
 ```
 -------------------------------------------------------
  SNESREV Command Line Launcher
@@ -31,6 +34,7 @@
 
  Base Game Commands:
   z3         Zelda 3 (US)      6D4F10A8B10E10DBE624CB23CF03B88BB8252973
+  z3-redux   (Redux)           B2A07A59E64C498BC1B2F28728F9BF4014C8D582
   sm         Super Metroid     da957f0d63d14cb441d215462904c4fa8519c613
   sm-redux   SM Redux          0F4133F2E6BDD275B0CEEC3E348E2D6BF1C8189E
   smw        Super Mario World 553CF42F35ACF63028A369608742BB5B913C103F|6B47BB75D16514B6A476AA0C73A683A2A4C18765
@@ -47,27 +51,10 @@
   z3-pt      (Portuguese)      D0D09ED41F9C373FE6AFDCCAFBF0DA8C88D3D90D
   z3-nl      (Dutch)           FA8ADFDBA2697C9A54D583A1284A22AC764C7637
   z3-sv      (Swedish)         43CD3438469B2C3FE879EA2F410B3EF3CB3F1CA4
-  z3-redux   (Redux)           B2A07A59E64C498BC1B2F28728F9BF4014C8D582
-
-
-Information on patches to use...
-
-Super Metroid Redux - Just the default ips
-https://www.romhacking.net/hacks/4963/
-
-Zelda 3 Redux - Retranslation only.
-https://www.romhacking.net/translations/6657/
-
-Online Patcher...
-https://www.marcrobledo.com/RomPatcher.js/
-Make sure "Add SNES copier header" is not selected
-
 ```
 
--------------------------------------------------------
-
 ### Special Thanks
-This is a appimage for linux based on the work of these people
+This appimage for linux is made using the work of these people below...
 ```
 Original appimage maker         https://github.com/qurious-pixel/zelda3/releases/tag/launcher
 Appimage tooling                https://github.com/pkgforge-dev/Anylinux-AppImages
@@ -86,5 +73,5 @@ Super Metroid updated builder   https://github.com/LaserEyess/sm/tree/cmake
 ##Rom Hacks
 Zelda 3 Redux                   https://www.romhacking.net/translations/6657/
 Super Metroid Redux             https://www.romhacking.net/hacks/4963/
-
+Flips Patcher                   https://github.com/Alcaro/Flips
 ```
