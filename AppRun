@@ -104,12 +104,12 @@ HASH_Z3_REDUX="B2A07A59E64C498BC1B2F28728F9BF4014C8D582"
 
 GAME_LIST=(
     "z3|Zelda 3 (US)" 
+    "z3-redux|Zelda 3 Redux"
     "sm|Super Metroid"
     "sm-redux|Super Metroid Redux" 
     "smw|Super Mario World" 
     "smb1|Super Mario Bros." 
     "smbll|The Lost Levels" 
-    "z3-redux|Zelda 3 Redux"
     "z3-de|Zelda 3 (German)" 
     "z3-fr|Zelda 3 (French)" 
     "z3-fr-c|Zelda 3 (French Can)" 
@@ -135,6 +135,7 @@ show_help() {
     echo ""
     echo " Base Game Commands:"
     echo "  z3         Zelda 3 (US)      $HASH_Z3_US"
+    echo "  z3-redux   (Redux)           $HASH_Z3_REDUX"
     echo "  sm         Super Metroid     $HASH_SM"
     echo "  sm-redux   SM Redux          $HASH_SM_REDUX"
     echo "  smw        Super Mario World $HASH_SMW"
@@ -151,20 +152,6 @@ show_help() {
     echo "  z3-pt      (Portuguese)      $HASH_Z3_PT"
     echo "  z3-nl      (Dutch)           $HASH_Z3_NL"
     echo "  z3-sv      (Swedish)         $HASH_Z3_SV"
-    echo "  z3-redux   (Redux)           $HASH_Z3_REDUX"
-    echo ""    
-    echo ""    
-    echo "Information on patches to use..."
-    echo ""    
-    echo "Super Metroid Redux - Just the default ips"
-    echo "https://www.romhacking.net/hacks/4963/"
-    echo ""    
-    echo "Zelda 3 Redux - Retranslation only."
-    echo "https://www.romhacking.net/translations/6657/"
-    echo ""    
-    echo "Online Patcher..."
-    echo "https://www.marcrobledo.com/RomPatcher.js/"    
-    echo "Make sure \"Add SNES copier header\" is not selected"
     echo ""    
     echo "-------------------------------------------------------"
 }
@@ -226,15 +213,17 @@ find_and_rename_rom() {
 
 echo ">> Scanning directory for valid ROMs..." >&2
 
+export Z3_ROM=$(find_and_rename_rom "$HASH_Z3_US" "zelda3.sfc" "Z3")
+export Z3_REDUX_ROM=$(find_and_rename_rom "$HASH_Z3_REDUX" "zelda3.redux.sfc" "Z3_REDUX")
+
 export SM_ROM=$(find_and_rename_rom "$HASH_SM" "sm.smc" "SM")
-export SM_REDUX_ROM=$(find_and_rename_rom "$HASH_SM_REDUX" "sm_redux.smc" "SM_REDUX")
+export SM_REDUX_ROM=$(find_and_rename_rom "$HASH_SM_REDUX" "sm.redux.smc" "SM_REDUX")
 
 export SMW_ROM=$(find_and_rename_rom "$HASH_SMW" "smw.sfc" "SMW")
 export SMAS_ROM=$(find_and_rename_rom "$HASH_SMAS" "smas.sfc" "SMAS")
 export SMB1_ROM=$(find_and_rename_rom "$HASH_SMB1" "smb1.sfc" "SMB1")
 export SMBLL_ROM=$(find_and_rename_rom "$HASH_SMBLL" "smbll.sfc" "SMBLL")
 
-export Z3_ROM=$(find_and_rename_rom "$HASH_Z3_US" "zelda3.sfc" "Z3")
 export Z3_DE_ROM=$(find_and_rename_rom "$HASH_Z3_DE" "zelda3.de.sfc" "Z3_DE")
 export Z3_FR_ROM=$(find_and_rename_rom "$HASH_Z3_FR" "zelda3.fr.sfc" "Z3_FR")
 export Z3_FRC_ROM=$(find_and_rename_rom "$HASH_Z3_FRC" "zelda3.fr-c.sfc" "Z3_FRC")
@@ -243,7 +232,6 @@ export Z3_PL_ROM=$(find_and_rename_rom "$HASH_Z3_PL" "zelda3.pl.sfc" "Z3_PL")
 export Z3_PT_ROM=$(find_and_rename_rom "$HASH_Z3_PT" "zelda3.pt.sfc" "Z3_PT")
 export Z3_NL_ROM=$(find_and_rename_rom "$HASH_Z3_NL" "zelda3.nl.sfc" "Z3_NL")
 export Z3_SV_ROM=$(find_and_rename_rom "$HASH_Z3_SV" "zelda3.sv.sfc" "Z3_SV")
-export Z3_REDUX_ROM=$(find_and_rename_rom "$HASH_Z3_REDUX" "zelda3.redux.sfc" "Z3_REDUX")
 
 declare -A IS_PLAYABLE
 for entry in "${GAME_LIST[@]}"; do
@@ -252,12 +240,12 @@ for entry in "${GAME_LIST[@]}"; do
 
     case "$KEY" in
         z3)       [ -n "$Z3_ROM" ] && IS_PLAYABLE["$KEY"]=1 ;;
+        z3-redux) { [ -n "$Z3_REDUX_ROM" ] || [ -f "$INTERNAL_DIR/z3.redux.ips" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
         sm)       [ -n "$SM_ROM" ] && IS_PLAYABLE["$KEY"]=1 ;;
-        sm-redux) [ -n "$SM_REDUX_ROM" ] && IS_PLAYABLE["$KEY"]=1 ;;
+        sm-redux) { [ -n "$SM_REDUX_ROM" ] || [ -f "$INTERNAL_DIR/sm.redux.ips" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
         smw)      [ -n "$SMW_ROM" ] && IS_PLAYABLE["$KEY"]=1 ;;
         smb1)     { [ -n "$SMB1_ROM" ] || [ -n "$SMAS_ROM" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
         smbll)    { [ -n "$SMBLL_ROM" ] || [ -n "$SMAS_ROM" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
-        z3-redux) { [ -n "$Z3_ROM" ] && [ -n "$Z3_REDUX_ROM" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
         z3-de)    { [ -n "$Z3_ROM" ] && [ -n "$Z3_DE_ROM" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
         z3-fr)    { [ -n "$Z3_ROM" ] && [ -n "$Z3_FR_ROM" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
         z3-fr-c)  { [ -n "$Z3_ROM" ] && [ -n "$Z3_FRC_ROM" ]; } && IS_PLAYABLE["$KEY"]=1 ;;
@@ -508,7 +496,7 @@ launch_z3() {
         z3-pt)    TARGET_LANG="pt";    TRANS_ROM_VAR="$Z3_PT_ROM";;
         z3-nl)    TARGET_LANG="nl";    TRANS_ROM_VAR="$Z3_NL_ROM";;
         z3-sv)    TARGET_LANG="sv";    TRANS_ROM_VAR="$Z3_SV_ROM";;
-        z3-redux) TARGET_LANG="redux"; TRANS_ROM_VAR="$Z3_REDUX_ROM";;
+        z3-redux) TARGET_LANG="redux"; TRANS_ROM_VAR="${Z3_REDUX_ROM:-srl-roms/zelda3.redux.sfc}";;
     esac
 
     local LANG_DAT="$CONF_DIR/$TYPE/zelda3_assets.dat"
@@ -516,7 +504,10 @@ launch_z3() {
     if [ ! -e "$LANG_DAT" ]; then
         echo ">> Asset file '$LANG_DAT' not found. Starting extraction..."
         [ -z "$Z3_ROM" ] && { echo "Error: Missing US Zelda 3 ROM content."; exit 1; }
-        if [ "$TARGET_LANG" != "en" ] && [ -z "$TRANS_ROM_VAR" ]; then
+        
+        [ "$TYPE" == "z3-redux" ] && [ ! -f "$TRANS_ROM_VAR" ] && [ -f "srl-roms/zelda3.redux.sfc" ] && TRANS_ROM_VAR="srl-roms/zelda3.redux.sfc"
+
+        if [ "$TARGET_LANG" != "en" ] && [ ! -f "$TRANS_ROM_VAR" ]; then
             echo "Error: Missing translation ROM content for $TARGET_LANG."; exit 1
         fi
 
@@ -537,16 +528,16 @@ launch_z3() {
 
     ln -sf "$LANG_DAT" zelda3_assets.dat
     link_rom "$Z3_ROM"
-    [ -n "$TRANS_ROM_VAR" ] && link_rom "$TRANS_ROM_VAR"
+    [ -f "$TRANS_ROM_VAR" ] && link_rom "$TRANS_ROM_VAR"
     
     local REAL_CONF="$CONF_DIR/$TYPE/zelda3.ini"
     if [ ! -e "$REAL_CONF" ]; then
-         [ -e "zelda3.ini.$TARGET_LANG" ] && cp "zelda3.ini.$TARGET_LANG" "$REAL_CONF" || cp "${SCRIPT_PATH}"/assets/zelda3.ini "$REAL_CONF"
+         [ -e "zelda3.ini.$TARGET_LANG" ] && cp "zelda3.ini.$TARGET_LANG" "$REAL_CONF" || cp "${SCRIPT_PATH}/assets/zelda3.ini" "$REAL_CONF"
     fi
     link_rom "$REAL_CONF" zelda3.ini
     
     echo ">> Launching Zelda 3 executable..."
-    "${SCRIPT_PATH}"/bin/zelda3 "$@"
+    "${SCRIPT_PATH}/bin/zelda3" "$@"
 
     if [ ! -L "zelda3.ini" ] && [ -f "zelda3.ini" ]; then
         mv "zelda3.ini" "$REAL_CONF"
@@ -563,7 +554,6 @@ extractrom () {
     done
 
     local TYPE=$1; shift
-    local CONF_DIR="srl-config" 
     local SAVE_DIR="srl-saves/$TYPE"
     mkdir -p "$CONF_DIR/$TYPE" "$SAVE_DIR"
     
@@ -578,14 +568,27 @@ extractrom () {
     echo ">> Preparing to launch: $TYPE (Config: $CONF_DIR/$TYPE | Saves: $SAVE_DIR)"
 
     case "$TYPE" in
+        sm-redux)
+            if [ ! -f "$SM_REDUX_ROM" ] && [ -n "$SM_ROM" ] && [ -f "$INTERNAL_DIR/sm.redux.ips" ]; then
+                echo ">> Auto-patching Super Metroid Redux..."
+                "$SCRIPT_PATH/bin/flips" --apply "$INTERNAL_DIR/sm.redux.ips" "$SM_ROM" "srl-roms/sm.redux.smc"
+                export SM_REDUX_ROM="srl-roms/sm.redux.smc"
+            fi
+            ROM_LINK_NAME="sm.smc" launch_std "$SM_REDUX_ROM" "sm-redux" "sm.ini" "" "$@" 
+            ;;
+        z3-redux)
+            if [ ! -f "srl-roms/zelda3.redux.sfc" ] && [ -n "$Z3_ROM" ] && [ -f "$INTERNAL_DIR/z3.redux.ips" ]; then
+                echo ">> Auto-patching Zelda 3 Redux..."
+                "$SCRIPT_PATH/bin/flips" --apply "$INTERNAL_DIR/z3.redux.ips" "$Z3_ROM" "srl-roms/zelda3.redux.sfc"
+                export Z3_REDUX_ROM="srl-roms/zelda3.redux.sfc"
+            fi
+            launch_z3 "$TYPE" "$@" 
+            ;;
         z3|z3-*)
             launch_z3 "$TYPE" "$@"
             ;;
         sm)
             launch_std "$SM_ROM" "sm" "sm.ini" "" "$@" 
-            ;;
-        sm-redux)
-            ROM_LINK_NAME="sm.smc" launch_std "$SM_REDUX_ROM" "sm-redux" "sm.ini" "" "$@" 
             ;;
         smw)
             launch_smw "$TYPE" "$SMW_ROM" "" "$@"
