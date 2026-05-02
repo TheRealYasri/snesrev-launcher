@@ -17,7 +17,8 @@
 13. (Update 6) Recompiled smw for lag issues.
 (https://github.com/TheRealYasri/smw/actions/runs/24545395292)
 14. (Update 6) Added super metroid redux, needed a seperate executable. (https://github.com/TheRealYasri/sm/actions/runs/24582028652)
-
+15. (Update 7) Removed many unneeded libraries.
+16. (Update 7) Changed appimage maker to [Anylinux-AppImages](https://github.com/pkgforge-dev/Anylinux-AppImages) 
 ```
 -------------------------------------------------------
  SNESREV Command Line Launcher
@@ -61,8 +62,6 @@ Online Patcher...
 https://www.marcrobledo.com/RomPatcher.js/
 Make sure "Add SNES copier header" is not selected
 
--------------------------------------------------------
-
 ```
 
 -------------------------------------------------------
@@ -71,6 +70,7 @@ Make sure "Add SNES copier header" is not selected
 This is a appimage for linux based on the work of these people
 ```
 Original appimage maker         https://github.com/qurious-pixel/zelda3/releases/tag/launcher
+Appimage tooling                https://github.com/pkgforge-dev/Anylinux-AppImages
 
 ##Decomplation Source
 Mario Source                    https://github.com/galaxyhaxz/smw-src
