@@ -17,11 +17,11 @@
 13. (Update 6) Recompiled smw for lag issues.
 (https://github.com/TheRealYasri/smw/actions/runs/24545395292)
 14. (Update 6) Added super metroid redux, needed a seperate executable. (https://github.com/TheRealYasri/sm/actions/runs/24582028652)
-15. (Update 7) Removed many unneeded libraries.
+15. (Update 7) Removed many unneeded libraries. 181 MB > 55.1 MB
 16. (Update 7) Changed appimage maker to [Anylinux-AppImages](https://github.com/pkgforge-dev/Anylinux-AppImages) 
 17. (Update 8) Super Metroid Redux will auto patch if base rom is available.
 18. (Update 8) Zelda 3 Redux will auto patch if base rom is available.
-
+19. (Update 9) Removed even more unneeded files. 55.5 MB > 18MB
 ```
 -------------------------------------------------------
  SNESREV Command Line Launcher
