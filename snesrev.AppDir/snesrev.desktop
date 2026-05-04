@@ -1,0 +1,30 @@
+[Desktop Entry]
+Name=SnesRev Launcher
+Exec=AppRun
+Terminal=false
+Type=Application
+Icon=snesrev
+Comment=snesrev ports
+Categories=Game;
+StartupWMClass=snesrev;
+Path=
+StartupNotify=false
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+X-AppImage-Name=SnesRev_Launcher
+X-AppImage-Version=1.9.0
+X-AppImage-Arch=x86_64
