@@ -1,27 +1,49 @@
 # snesrev-launcher
 
 ### Change Log
-1. Automatically find the right rom and rename it, just drop them into the same folder as the appimage.
-2. Added command line parameters for .desktop files or to run from other apps.
-3. (update 1) Recompiled super metroid, it fixed crashing/graphical bugs.
-(https://github.com/TheRealYasri/sm/actions/runs/24377734056)
-4. (update 2) added back zenity gui, no sub menus.
-5. (update 2) Made every game variation that shares ini files each get there own that is copied in when launched.
-6. (update 2) Added text output on what the script is doing as it runs.
-7. (update 3) Launcher now stores its files in srl-saves, srl-roms, srl-config per game version.
-8. (update 3) On game launch, symlinks for that game version's configs, saves,and rom are created.
-9. (update 3) it cleans up old links from past runs, when a game is started.
-10. (update 4) included info where to get the zelda 3 redux translation
-11. (Update 5) Added option (default: disabled) to install .desktop files with auto update if you move the directory.
-12. (Update 5) Refactored some sections and added a cache for some parts to speed up the script.
-13. (Update 6) Recompiled smw for lag issues.
-(https://github.com/TheRealYasri/smw/actions/runs/24545395292)
-14. (Update 6) Added super metroid redux, needed a seperate executable. (https://github.com/TheRealYasri/sm/actions/runs/24582028652)
-15. (Update 7) Removed many unneeded libraries. 181 MB > 55.1 MB
-16. (Update 7) Changed appimage maker to [Anylinux-AppImages](https://github.com/pkgforge-dev/Anylinux-AppImages) 
-17. (Update 8) Super Metroid Redux will auto patch if base rom is available.
-18. (Update 8) Zelda 3 Redux will auto patch if base rom is available.
-19. (Update 9) Removed even more unneeded files. 55.5 MB > 18MB
+- **1.10** 
+- Fixed missing files for extracting smb1 and smbll 
+
+- **1.9** 
+- Removed even more unneeded files. 55.5 MB > 18MB
+ 
+- **1.8**
+- Super Metroid Redux will auto patch if base rom is available.
+- Zelda 3 Redux will auto patch if base rom is available.
+
+- **1.7**
+- Removed many unneeded libraries. 181 MB > 55.1 MB
+- Changed appimage maker to [Anylinux-AppImages](https://github.com/pkgforge-dev/Anylinux-AppImages) 
+
+- **1.6**
+- Recompiled smw for lag issues.
+- Added super metroid redux, needed a seperate executable. 
+
+- **1.5**
+- Added option (default: disabled) to install .desktop files with auto update if you move the directory.
+- Refactored some sections and added a cache for some parts to speed up the script.
+
+- **1.4**
+- included info where to get the zelda 3 redux translation
+
+- **1.3**
+- Launcher now stores its files in srl-saves, srl-roms, srl-config per game version.
+- On game launch, symlinks for that game version's configs, saves,and rom are created.
+- it cleans up old links from past runs, when a game is started.
+
+- **1.2**
+- added back zenity gui, no sub menus.
+- Made every game variation that shares ini files each get there own that is copied in when launched.
+- Added text output on what the script is doing as it runs.
+
+- **1.1**
+- Recompiled super metroid, it fixed crashing/graphical bugs.
+
+- **1.0**
+- Automatically find the right rom and rename it, just drop them into the same folder as the appimage.
+- Added command line parameters for .desktop files or to run from other apps.
+
+
 ```
 -------------------------------------------------------
  SNESREV Command Line Launcher
